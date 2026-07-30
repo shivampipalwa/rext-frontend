@@ -1,0 +1,145 @@
+/*
+ * Theme — dark only, no light mode, no toggle.
+ * Tailwind v4 CSS-first config: tokens declared in `@theme` become utilities
+ * automatically (e.g. --color-bid -> bg-bid / text-bid / border-bid,
+ * --radius-panel -> rounded-panel, --spacing-row-book -> h-row-book / p-row-book).
+ */
+
+@import 'tailwindcss';
+
+/* Self-hosted fonts — no external font requests. */
+@import '@fontsource-variable/archivo';
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/500.css';
+
+@theme {
+  /* Surfaces */
+  --color-canvas: #0a0d12;
+  --color-panel: #10141b;
+  --color-panel-2: #161b24;
+  --color-hairline: #212836;
+  --color-hairline-2: #2c3546;
+
+  /* Text */
+  --color-ink: #e8ecf3;
+  --color-ink-2: #93a0b4;
+  --color-ink-3: #5c6879; /* decorative/disabled only — fails AA at body size */
+
+  /* Bid / ask semantics — the entire colour budget */
+  --color-bid: #22c58b;
+  --color-ask: #f1616f;
+  --color-bid-wash: rgb(34 197 139 / 0.1);
+  --color-ask-wash: rgb(241 97 111 / 0.1);
+
+  /* Accent + status */
+  --color-accent: #7c6cff;
+  --color-warn: #e8a33d;
+
+  /* Fonts */
+  --font-sans: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* Radii — 8px panels, 6px inputs/buttons, 4px chips. No pills. */
+  --radius-panel: 8px;
+  --radius-input: 6px;
+  --radius-chip: 4px;
+
+  /* Density — row heights and primary button height as named spacing so
+     they compose with h-/p-/gap- utilities (e.g. h-row-book, h-btn-primary). */
+  --spacing-row-book: 22px; /* order book + tape rows */
+  --spacing-row-orders: 34px; /* orders table rows */
+  --spacing-btn-primary: 44px; /* primary buttons */
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  /* Every interactive element gets a visible focus ring: 2px accent, 2px offset. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Applied to every numeral in the app. Non-negotiable: proportional digits
+     make a live order book jitter. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* Named type-scale roles from DESIGN.md's "Type" table. */
+  .text-last-price {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 22px;
+    font-weight: 500;
+  }
+
+  .text-num-table {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 11.5px;
+    font-weight: 400;
+  }
+
+  .text-num-form {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .text-panel-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+  }
+
+  .text-ui-body {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .text-page-heading {
+    font-family: var(--font-sans);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Motion is sparse and only ever encodes a change. Reduced-motion drops every
+   flash and fade — data still updates instantly, only the animation is cut. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
