@@ -20,8 +20,8 @@ export function SideToggle({ value, onChange, disabled }: SideToggleProps) {
         aria-checked={value === 'Bid'}
         disabled={disabled}
         onClick={() => onChange('Bid')}
-        className={`h-8 rounded-input border text-ui-body transition-colors disabled:opacity-50 ${
-          value === 'Bid' ? 'border-bid bg-bid-wash text-bid' : 'border-hairline text-ink-2 hover:text-ink'
+        className={`h-11 rounded-input border text-ui-body transition-colors disabled:opacity-50 ${
+          value === 'Bid' ? 'border-bid bg-bid-wash text-bid' : 'border-hairline text-ink-2 hover:border-hairline-2 hover:text-ink'
         }`}
       >
         Buy
@@ -32,8 +32,8 @@ export function SideToggle({ value, onChange, disabled }: SideToggleProps) {
         aria-checked={value === 'Ask'}
         disabled={disabled}
         onClick={() => onChange('Ask')}
-        className={`h-8 rounded-input border text-ui-body transition-colors disabled:opacity-50 ${
-          value === 'Ask' ? 'border-ask bg-ask-wash text-ask' : 'border-hairline text-ink-2 hover:text-ink'
+        className={`h-11 rounded-input border text-ui-body transition-colors disabled:opacity-50 ${
+          value === 'Ask' ? 'border-ask bg-ask-wash text-ask' : 'border-hairline text-ink-2 hover:border-hairline-2 hover:text-ink'
         }`}
       >
         Sell

@@ -31,9 +31,26 @@
   --color-bid-wash: rgb(34 197 139 / 0.1);
   --color-ask-wash: rgb(241 97 111 / 0.1);
 
+  /* Brand. Rust's own #ce422b, for the engine this trades against.
+     IDENTITY ONLY — the wordmark, the favicon, nothing else. It sits ~15° of
+     hue from --ask (#f1616f), so a rust-coloured button or link next to a
+     price column would read as "sell". In a trading UI the interaction colour
+     has to be the hue that can never be mistaken for bid or ask, which is why
+     --accent stays indigo. See DESIGN.md's Amendments. */
+  --color-brand: #ce422b;
+
   /* Accent + status */
   --color-accent: #7c6cff;
+  /* Solid-fill sibling of --accent. White on #7c6cff is only 3.9:1 — fine for
+     a 2px focus ring, not for a button label. #5b4be8 carries white at 5.8:1,
+     so filled buttons pass AA without the accent hue drifting. */
+  --color-accent-strong: #5b4be8;
   --color-warn: #e8a33d;
+
+  /* Chart volume bars. --bid-wash/--ask-wash are 10% row-flash tokens and
+     vanish as histogram fills; these are the same hues at real weight. */
+  --color-bid-vol: rgb(34 197 139 / 0.45);
+  --color-ask-vol: rgb(241 97 111 / 0.45);
 
   /* Fonts */
   --font-sans: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
@@ -73,6 +90,107 @@
   [tabindex]:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
+  }
+}
+
+/* One control system, so a button means the same thing on every screen.
+   Before this existed the app had three unrelated primary buttons — solid
+   indigo (sign in), ghost indigo (deposit/withdraw), and 10%-wash green
+   (buy) — and the two ghosts read as disabled. There are now exactly three
+   button roles, and `.btn-buy`/`.btn-sell` are the only place bid/ask
+   colour is ever used as a fill:
+
+     .btn-primary  the one committing action on a screen
+     .btn-quiet    secondary/inline actions (cancel an order, try again)
+     .btn-buy/-sell  order submit only — solid, because it's the moment money moves
+
+   Sizing stays in the markup (h-btn-primary, h-9) so density can differ by
+   context without forking the role. */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-input);
+    border: 1px solid transparent;
+    padding-inline: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+  }
+
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .btn-primary {
+    background-color: var(--color-accent-strong);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-accent);
+  }
+
+  .btn-quiet {
+    border-color: var(--color-hairline-2);
+    background-color: var(--color-panel-2);
+    color: var(--color-ink-2);
+  }
+  .btn-quiet:hover:not(:disabled) {
+    border-color: var(--color-ink-3);
+    color: var(--color-ink);
+  }
+
+  /* Dark label on the fill, not white: #0a0d12 on --bid is 8.5:1 and on
+     --ask 6.1:1, where white would be 2.5:1 and 3.7:1. */
+  .btn-buy {
+    background-color: var(--color-bid);
+    color: var(--color-canvas);
+  }
+  .btn-buy:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-bid) 88%, #fff);
+  }
+
+  .btn-sell {
+    background-color: var(--color-ask);
+    color: var(--color-canvas);
+  }
+  .btn-sell:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-ask) 88%, #fff);
+  }
+
+  /* Shared chrome for every text input, so the auth fields and the trade
+     fields are recognisably the same control. */
+  .field {
+    border-radius: var(--radius-input);
+    border: 1px solid var(--color-hairline-2);
+    background-color: var(--color-panel-2);
+    padding-inline: 0.625rem;
+    color: var(--color-ink);
+  }
+  .field::placeholder {
+    color: var(--color-ink-3);
+  }
+  .field:disabled {
+    opacity: 0.5;
+  }
+
+  /* The one native control in the app; without this it renders the OS
+     chevron and breaks the surface. */
+  .select-field {
+    appearance: none;
+    padding-right: 1.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%2393a0b4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 12px 12px;
   }
 }
 

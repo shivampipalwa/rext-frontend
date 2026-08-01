@@ -72,12 +72,24 @@ class OrdersSocketController {
     const ws = new WebSocket(`${WS_BASE}/ws/orders`)
     this.ws = ws
 
+    // Every handler below bails out if `ws` is no longer `this.ws` — i.e. a
+    // stale event from a socket this controller has since superseded (closed
+    // and reopened). This matters because the controller is a SINGLETON with
+    // shared mutable state (authConfirmed, authTimer), while React 19
+    // StrictMode double-invokes effects in dev: mount -> cleanup -> mount,
+    // which calls connect() -> disconnect() -> connect() synchronously. The
+    // first socket's `close` event still arrives asynchronously afterward,
+    // and without this guard its handler would read the SECOND socket's
+    // (still-pending) authConfirmed state, wrongly conclude the handshake
+    // failed, and clear a token that was never actually rejected.
     ws.onopen = () => {
+      if (ws !== this.ws) return
       ws.send(JSON.stringify({ token: this.token }))
       this.authTimer = setTimeout(() => this.confirmAuth(), AUTH_CONFIRM_TIMEOUT_MS)
     }
 
     ws.onmessage = (event) => {
+      if (ws !== this.ws) return
       this.confirmAuth()
       const msg = JSON.parse(event.data as string) as Record<string, unknown>
       const key = Object.keys(msg)[0]
@@ -89,6 +101,7 @@ class OrdersSocketController {
     }
 
     ws.onclose = () => {
+      if (ws !== this.ws) return
       if (this.authTimer) {
         clearTimeout(this.authTimer)
         this.authTimer = null

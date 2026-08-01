@@ -63,8 +63,15 @@ export interface Trade {
 
 export type ConnState = 'connecting' | 'live' | 'reconnecting' | 'closed'
 
+// The last three are the API's abuse guards (API.md § Abuse guards). They
+// exist because this is a public demo where anyone can mint their own
+// balance, and each one needs its own explanation in the UI — "rejected" on
+// its own leaves the user with no idea what to change.
 export type RejectReason =
   | 'InsufficientFunds'
   | 'InvalidPair'
   | 'InvalidAmount'
   | 'UnsupportedOrderType'
+  | 'DepositLimitExceeded'
+  | 'PriceOutOfBand'
+  | 'SelfTrade'

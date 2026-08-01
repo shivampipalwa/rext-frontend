@@ -43,7 +43,15 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const KNOWN_REASONS: readonly RejectReason[] = ['InsufficientFunds', 'InvalidPair', 'InvalidAmount', 'UnsupportedOrderType']
+const KNOWN_REASONS: readonly RejectReason[] = [
+  'InsufficientFunds',
+  'InvalidPair',
+  'InvalidAmount',
+  'UnsupportedOrderType',
+  'DepositLimitExceeded',
+  'PriceOutOfBand',
+  'SelfTrade',
+]
 
 function asRejectReason(value: unknown): RejectReason | undefined {
   return typeof value === 'string' && (KNOWN_REASONS as readonly string[]).includes(value) ? (value as RejectReason) : undefined

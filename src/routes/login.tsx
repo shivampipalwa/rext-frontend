@@ -110,7 +110,7 @@ export default function LoginRoute() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               aria-invalid={errors.email ? 'true' : undefined}
-              className="h-9 rounded-input border border-hairline-2 bg-panel-2 px-3 text-ui-body text-ink"
+              className="field h-9 text-ui-body"
             />
             {errors.email && (
               <span role="alert" className="text-ui-body text-ask">
@@ -127,7 +127,7 @@ export default function LoginRoute() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               aria-invalid={errors.password ? 'true' : undefined}
-              className="h-9 rounded-input border border-hairline-2 bg-panel-2 px-3 text-ui-body text-ink"
+              className="field h-9 text-ui-body"
             />
             {errors.password && (
               <span role="alert" className="text-ui-body text-ask">
@@ -139,7 +139,7 @@ export default function LoginRoute() {
           <button
             type="submit"
             disabled={pending}
-            className="mt-2 h-btn-primary rounded-input bg-accent text-ui-body text-ink transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn btn-primary mt-2 h-btn-primary"
           >
             {pending ? 'Signing in…' : 'Sign in'}
           </button>

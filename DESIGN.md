@@ -482,3 +482,119 @@ src/
    empty and error states, copy review.
 
 Phases 1–2 give a working public market view; 3–4 make it a usable exchange.
+
+---
+
+## Amendments
+
+Changes made after the first build pass, from reviewing the running app. Where
+these contradict the sections above, these win.
+
+**A control system, not per-screen buttons.** The build ended up with three
+unrelated primary buttons — solid indigo (sign in), accent-outlined (deposit,
+withdraw), and a 10%-wash green (buy) — and the two outlined ones read as
+disabled. `styles/theme.css` now defines three roles: `.btn-primary` (the one
+committing action on a screen), `.btn-quiet` (secondary and inline actions),
+and `.btn-buy` / `.btn-sell` (order submit only). Sizing stays in the markup.
+
+**`--accent-strong: #5b4be8`.** White on `--accent` is 3.9:1 — fine for a 2px
+focus ring, not for a button label. Filled buttons use the darker sibling at
+5.8:1. `--accent` keeps its original scope: focus rings, links, active tabs,
+logo.
+
+**Buy/Sell fills are solid.** `--bid` and `--ask` at full strength with
+`--canvas` as the label colour (8.5:1 and 6.1:1). The order submit is the
+moment money moves and should be the heaviest element in the panel.
+
+**One viewport, one ceiling.** Panels no longer carry hand-picked `h-[Npx]`
+values per tier. The trade screen sizes itself to `100vh - header` with a
+per-tier `min-h`, and the three columns divide it — chart, book and tape take
+`flex-1`, order entry and wallet are content-sized. The columns end level by
+construction rather than by coincidence, and the chart grows with the display.
+
+The orders panel is the one exception and keeps a fixed height. Sizing it to
+its content (via `max-h`) avoids dead space under a short table, but it makes
+every panel above it a function of how many orders you happen to have: with
+the top row on `flex-1`, placing or cancelling an order resized the chart and
+the book. Measured at 1680×1000, one row gave a 408px chart and fourteen rows
+gave 272px. Reading surfaces must not move when an order fills, so the number
+is fixed (248px desktop, 232px elsewhere — roughly three rows, scrolling
+beyond) and the dead space under a short table is accepted.
+
+**Buy/Sell leads the order form.** It was two ~40px chips in the corner of the
+order-type row. It is now the first control, full width, above Limit/Market;
+price and size sit side by side; the disabled submit states which field is
+missing.
+
+**Depth bars scale to a 12-level window.** Scaling to the deepest level on the
+side let one far-out resting order set the scale for everyone, rendering the
+levels actually being traded as 5%-wide slivers. Levels past the window
+saturate at 100%.
+
+**Synthesized candles are drawn in `--ink-3`.** The gap-fill flat candles were
+painted in bid/ask green, claiming activity that never happened — at `1s` they
+outnumber real candles enough to bury them.
+
+**The chart frames the current burst, not the whole series.** `fitContent()`
+frames every bucket including synthesized ones, which on `1s` meant ~1,500
+buckets of which ~40 carried a trade — every real candle squeezed into a few
+pixels at the right edge. Neither a fixed bucket count nor "the Nth most recent
+trade" fixes it, because this market trades in bursts separated by long
+silences (measured on the running engine: a 21-trade burst over 40 seconds,
+then a 99-minute gap, then an older burst) and any fixed N reaches back across
+a gap. The left edge is now the start of the current burst — walk back until
+more than 30 consecutive empty buckets — bounded to 60–240 buckets.
+
+**The Time column is conditional.** `GET /orders` returns no timestamp, so the
+column is rendered only when at least one visible row can fill it. Status moved
+out of the Filled cell into its own column.
+
+**24h stats are wired.** `useMarketStats` existed and was correct but was
+imported by nothing, so the header rendered dashes on a live market. The header
+also falls back to the last candle close for the price when the tape is empty,
+which it always is on load.
+
+**The product is REXT, and `--brand` is Rust's own `#ce422b`.** The engine is
+Rust, so the wordmark takes Rust's colour. It is used for identity only — the
+header wordmark and the favicon — and never for a control.
+
+The palette is otherwise unchanged, deliberately. `#ce422b` sits about 15° of
+hue from `--ask` (`#f1616f`), so a rust-coloured button, link or focus ring
+beside a price column would read as "sell". In a trading UI the interaction
+colour has to be the one hue that can never be confused with bid or ask, and
+indigo is; rust isn't. So the brand colour and the interaction colour are
+different colours on purpose, kept apart by position: the wordmark sits in the
+far corner of the header, never adjacent to a number. Repainting `--accent`
+rust, or shifting `--ask` to clear rust's hue, would both trade real legibility
+on the trading surfaces for brand consistency on the chrome — the wrong trade
+for this product.
+
+**`seq` is gone from the header.** It was justified as exposing the one
+invisible failure mode, but `marketSocket` deliberately does not act on seq
+gaps: the public feed skips sequence numbers under completely normal use (a
+deposit, a trade on another pair), so a gap is not a signal a user can act on.
+Real message loss arrives as a socket close, which the status dot reports.
+A number nobody can act on is noise.
+
+**The order book does not scroll.** It renders as much depth as the panel can
+hold — measured with a ResizeObserver, sliced to the levels nearest the spread,
+with each side taking half the box so the spread row holds the centre line.
+Scrolling a surface that rewrites itself several times a second is a losing
+proposition: the rows move under the pointer as you reach for them, and the
+interesting part (the spread) is the part you have to scroll to find. Depth
+bars now scale to the deepest level ON SCREEN, which also retires the fixed
+12-level window.
+
+**The wallet's "Held against open orders" note is page-only.** It still
+explains the ledger split on `/wallet`, where there's room; the trade screen's
+wallet panel is a four-number glance beside the order form, and two lines of
+prose was most of it.
+
+**Tape rows are keyed on a client-side `id`, never `seq`.** `seq` is a
+transaction boundary, not a message id — one market order sweeping several
+price levels emits several trade messages under a single seq (which is why
+marketSocket's stale check is `<` and not `<=`). Keying the rendered list on it
+produced duplicate React keys, and React responded by omitting rows and
+reusing nodes out of order: the tape displayed its timestamps ascending even
+though the store's array was, by construction, strictly newest-first.
+`useTapeStore.push` now stamps a monotonic `id`.

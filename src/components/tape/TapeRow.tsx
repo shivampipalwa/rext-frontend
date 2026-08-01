@@ -6,17 +6,17 @@
 // ▲/▼ affordance and an explicit Buy/Sell word in its accessible name.
 //
 // New rows fade in over 120ms via the `tape-fade-in` keyframe declared once
-// by TradeTape. Because trades are keyed by `seq` and existing entries keep
-// their identity across re-renders (useTapeStore only prepends), the
-// animation plays once on mount and never replays for rows that were
+// by TradeTape. Because trades are keyed by their unique `id` and existing
+// entries keep their identity across re-renders (useTapeStore only prepends),
+// the animation plays once on mount and never replays for rows that were
 // already on screen.
 
 import { memo } from 'react'
-import type { Trade } from '../../lib/types'
+import type { TapeTrade } from '../../state/useTapeStore'
 import { fmtInt, fmtTime } from '../../lib/format'
 
 export interface TapeRowProps {
-  trade: Trade
+  trade: TapeTrade
 }
 
 function TapeRowImpl({ trade }: TapeRowProps) {

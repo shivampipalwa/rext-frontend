@@ -29,7 +29,7 @@ export function CancelButton({ orderId, onCancel }: CancelButtonProps) {
       onClick={handleClick}
       disabled={pending}
       aria-label={`Cancel order #${orderId}`}
-      className="rounded-chip border border-hairline-2 px-2 py-0.5 text-ui-body text-ink-2 transition-colors hover:border-ask hover:text-ask disabled:cursor-not-allowed disabled:opacity-50"
+      className="btn btn-quiet h-7 px-2.5 hover:border-ask hover:text-ask"
     >
       {pending ? 'Cancelling…' : 'Cancel'}
     </button>

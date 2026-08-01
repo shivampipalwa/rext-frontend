@@ -103,7 +103,7 @@ export default function AdminRoute() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto p-4">
       <h1 className="text-page-heading">Admin</h1>
 
       {forbidden && (
@@ -120,8 +120,8 @@ export default function AdminRoute() {
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Panel label="List a pair">
-          <form onSubmit={handleList} className="flex flex-col gap-2">
+        <Panel label="List a pair" bodyClassName="flex">
+          <form onSubmit={handleList} className="flex h-full w-full flex-col gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-panel-label">Pair</span>
               <input
@@ -131,7 +131,7 @@ export default function AdminRoute() {
                 placeholder="SOL-USD"
                 disabled={listState === 'busy'}
                 aria-label="Pair to list"
-                className="h-9 rounded-input border border-hairline bg-panel-2 px-2 text-num-form num uppercase text-ink placeholder:text-ink-3 disabled:opacity-50"
+                className="field num h-9 text-num-form uppercase"
               />
             </label>
             <p className="text-ui-body text-ink-2">Format BASE-QUOTE, e.g. SOL-USD. Listing an already-listed pair is safe.</p>
@@ -139,15 +139,15 @@ export default function AdminRoute() {
               type="submit"
               disabled={listState === 'busy'}
               aria-busy={listState === 'busy'}
-              className="h-9 rounded-input border border-bid bg-bid-wash text-ui-body text-bid transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-primary mt-auto h-btn-primary"
             >
               List pair
             </button>
           </form>
         </Panel>
 
-        <Panel label="Delist a pair">
-          <div className="flex flex-col gap-2">
+        <Panel label="Delist a pair" bodyClassName="flex">
+          <div className="flex h-full w-full flex-col gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-panel-label">Pair</span>
               <input
@@ -157,7 +157,7 @@ export default function AdminRoute() {
                 placeholder="SOL-USD"
                 disabled={delistState === 'busy'}
                 aria-label="Pair to delist"
-                className="h-9 rounded-input border border-hairline bg-panel-2 px-2 text-num-form num uppercase text-ink placeholder:text-ink-3 disabled:opacity-50"
+                className="field num h-9 text-num-form uppercase"
               />
             </label>
 
@@ -167,7 +167,7 @@ export default function AdminRoute() {
                 disabled={delistState === 'busy'}
                 aria-busy={delistState === 'busy'}
                 onClick={() => setConfirmingDelist(true)}
-                className="h-9 rounded-input border border-ask bg-ask-wash text-ui-body text-ask transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-quiet mt-auto h-btn-primary hover:border-ask hover:text-ask"
               >
                 Delist pair
               </button>
@@ -181,14 +181,14 @@ export default function AdminRoute() {
                   <button
                     type="button"
                     onClick={handleDelistConfirmed}
-                    className="h-9 flex-1 rounded-input border border-ask bg-ask-wash text-ui-body text-ask transition-colors"
+                    className="btn btn-sell h-9 flex-1"
                   >
                     Delist pair
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmingDelist(false)}
-                    className="h-9 flex-1 rounded-input border border-hairline text-ui-body text-ink-2 transition-colors hover:text-ink"
+                    className="btn btn-quiet h-9 flex-1"
                   >
                     Cancel
                   </button>

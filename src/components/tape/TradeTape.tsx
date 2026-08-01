@@ -35,8 +35,10 @@ export function TradeTape() {
         </div>
       ) : (
         <ul className="flex flex-1 flex-col">
+          {/* Keyed on `id`, never `seq`: one command can emit several trades
+              under a single seq, which made these keys collide (useTapeStore). */}
           {trades.map((trade) => (
-            <TapeRow key={trade.seq} trade={trade} />
+            <TapeRow key={trade.id} trade={trade} />
           ))}
         </ul>
       )}

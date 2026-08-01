@@ -72,7 +72,7 @@ export function IntegerInput({
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
       disabled={disabled}
-      className={`h-9 w-full rounded-input border border-hairline bg-panel-2 px-2 text-num-form num text-ink placeholder:text-ink-3 disabled:opacity-50 ${className}`}
+      className={`field num h-9 w-full text-num-form ${className}`}
       {...aria}
     />
   )

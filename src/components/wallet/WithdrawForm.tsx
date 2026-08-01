@@ -63,7 +63,7 @@ export function WithdrawForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+    <form onSubmit={handleSubmit} className="flex h-full w-full flex-col gap-3">
       <p className="text-ui-body text-ink-2">Draws only from available balance — held funds stay locked.</p>
       <div className="flex gap-2">
         <IntegerInput
@@ -80,7 +80,7 @@ export function WithdrawForm() {
           onChange={(e) => setCurrency(e.target.value as Currency)}
           disabled={submitting}
           aria-label="Withdrawal currency"
-          className="h-9 rounded-input border border-hairline bg-panel-2 px-2 text-num-form num text-ink disabled:opacity-50"
+          className="field select-field num h-9 text-num-form"
         >
           {CURRENCIES.map((c) => (
             <option key={c} value={c}>
@@ -101,9 +101,9 @@ export function WithdrawForm() {
         type="submit"
         disabled={submitting || exceedsAvailable}
         aria-busy={submitting}
-        className="h-9 rounded-input border border-accent text-ui-body text-ink transition-colors hover:bg-panel-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn btn-primary mt-auto h-btn-primary"
       >
-        Withdraw
+        {submitting ? 'Withdrawing…' : 'Withdraw'}
       </button>
     </form>
   )

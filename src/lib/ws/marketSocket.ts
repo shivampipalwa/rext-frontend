@@ -81,7 +81,16 @@ class MarketSocketController {
     const ws = new WebSocket(`${WS_BASE}/ws/market/${encodeURIComponent(this.pair)}`)
     this.ws = ws
 
+    // Every handler bails out if `ws` is no longer `this.ws` — a stale event
+    // from a socket this controller has since superseded. This singleton is
+    // connected from App.tsx's top-level effect, and React 19 StrictMode
+    // double-invokes effects in dev (mount -> cleanup -> mount, synchronously
+    // calling connect() -> disconnect() -> connect()); the first socket's
+    // close event still arrives asynchronously after that, and without this
+    // guard it would run scheduleReconnect() / mutate `phase` for a
+    // connection the second (real, live) socket has already replaced.
     ws.onmessage = (event) => {
+      if (ws !== this.ws) return
       const msg = JSON.parse(event.data as string) as RawMarketMessage
       if (this.phase === 'buffering') {
         this.buffer.push(msg)
@@ -92,19 +101,26 @@ class MarketSocketController {
     }
 
     ws.onopen = () => {
-      void this.snapshotAndReconcile()
+      if (ws !== this.ws) return
+      void this.snapshotAndReconcile(ws)
     }
 
     ws.onclose = () => {
+      if (ws !== this.ws) return
       if (this.closedByClient) return
       this.scheduleReconnect()
     }
   }
 
-  private async snapshotAndReconcile(): Promise<void> {
+  /** `ws` is the socket that triggered this call (its own `onopen`). Checked
+   * again after the `await` — by the time the fetch resolves, `this.ws` may
+   * already point at a newer connection (a fast reconnect during the gap),
+   * in which case this stale run must not touch the store on its behalf. */
+  private async snapshotAndReconcile(ws: WebSocket): Promise<void> {
     if (!this.pair) return
     try {
       const snapshot = await getBook(this.pair, BOOK_DEPTH)
+      if (ws !== this.ws) return // superseded while the fetch was in flight
       const rest = this.buffer.filter((m) => m.seq > snapshot.sequence)
       this.buffer = []
 
@@ -122,6 +138,7 @@ class MarketSocketController {
         useBookStore.getState().setConn('live')
       }
     } catch {
+      if (ws !== this.ws) return // superseded — not this run's connection to tear down
       // Snapshot fetch failed (e.g. offline) — tear down and let onclose
       // (or a manual retry below) drive the reconnect loop.
       this.teardownForReconnect()

@@ -44,9 +44,9 @@ export function IntervalTabs({ value, onChange }: IntervalTabsProps) {
             aria-selected={active}
             title={i.title}
             onClick={() => onChange(i.key)}
-            className={`rounded-chip px-2 py-0.5 text-ui-body transition-colors ${
-              active ? 'bg-panel-2 text-ink' : 'text-ink-2 hover:text-ink'
-            }`}
+            className={`num h-6 rounded-chip px-2 text-[12px] transition-colors ${
+              active ? 'bg-panel-2 text-ink' : 'text-ink-2 hover:bg-panel-2/60 hover:text-ink'
+            } ${i.title ? 'decoration-ink-3 underline-offset-4 hover:underline hover:decoration-dotted' : ''}`}
           >
             {i.label}
           </button>

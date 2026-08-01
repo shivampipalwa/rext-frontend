@@ -24,7 +24,9 @@ export function ReservePreview({ amount, available, currency, insufficient }: Re
         <span className={`text-num-form num ${insufficient ? 'text-ask' : 'text-ink'}`}>
           Reserves {fmtInt(amount)} of your {fmtInt(available)} {currency}
         </span>
-        <span className="shrink-0 text-num-form num text-ink-2">{pct.toFixed(0)}% of avail</span>
+        {/* "of available", not "of avail" — DESIGN.md's copy rules ban schema
+            vocabulary, and an abbreviation of a schema word is still one. */}
+        <span className="shrink-0 text-num-form num text-ink-2">{pct.toFixed(0)}% of available</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-chip bg-panel-2" role="presentation">
         <div

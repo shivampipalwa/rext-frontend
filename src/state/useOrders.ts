@@ -1,8 +1,9 @@
 // Orders — React Query snapshot (`GET /orders`) merged with the private
-// order-updates socket. This hook OWNS the `ordersSocket` lifecycle: it
-// connects whenever we're authenticated and disconnects on logout or
-// unmount. See lib/ws/ordersSocket.ts for the socket's exact contract before
-// touching this file.
+// order-updates socket. `useOrdersFeed` OWNS the `ordersSocket` lifecycle and
+// is mounted once at the app root (App.tsx); `useOrders` and `useOpenOrders`
+// are pure readers of the cache it maintains, so either may be called from
+// any number of components. See lib/ws/ordersSocket.ts for the socket's exact
+// contract before touching this file.
 //
 // Merge model: the REST snapshot seeds the React Query cache under
 // `['orders', accountId]`; every socket message patches that same cache
@@ -27,16 +28,25 @@
 // or cancels, and there is no push feed for balances themselves.
 
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { toast } from '../components/layout/Toasts'
 import { ApiError, cancelOrder as apiCancelOrder, getOrders } from '../lib/api'
 import type { Order, OrderStatus } from '../lib/types'
 import { ordersSocket, type OrdersSocketHandlers } from '../lib/ws/ordersSocket'
 import { useAuth } from './useAuth'
 
-function ordersQueryKey(accountId: number | null) {
+/** Exported for `useOpenOrders`, which reads this same cache entry. */
+export function ordersQueryKey(accountId: number | null) {
   return ['orders', accountId] as const
 }
+
+/** Client-observed accept times, keyed by order id. Module-level rather than
+ * a per-hook ref because the feed that populates it (`useOrdersFeed`, at the
+ * app root) outlives every component that reads it — on the mobile tier
+ * OrdersTable unmounts whenever another tab is selected, and a per-instance
+ * ref would drop every timestamp on each tab switch. Cleared on sign-out, so
+ * it never leaks one account's timings into another's session. */
+const receivedAtByOrderId = new Map<number, number>()
 
 /** An order plus a client-observed receive time. `GET /orders` returns no
  * timestamp field at all — there is nothing honest to show for a row loaded
@@ -60,32 +70,35 @@ export interface UseOrdersResult {
   cancelOrder: (orderId: number) => Promise<void>
 }
 
-export function useOrders(): UseOrdersResult {
+/** Owns the private order feed: connects the socket while authenticated and
+ * patches the shared React Query cache from it. Call this EXACTLY ONCE, at
+ * the app root — `ordersSocket` is a module singleton, so a second caller
+ * would reopen the socket on mount and the first unmount would disconnect it
+ * for everyone.
+ *
+ * It lives at the root rather than inside `useOrders` (where it used to) for
+ * the same reason the public market socket does in App.tsx: the component
+ * that reads orders is not always mounted. On the mobile tier the orders
+ * table sits behind one of four bottom tabs, so a user on the Trade tab —
+ * placing orders, which is precisely when order state changes — had no live
+ * feed at all, and anything derived from it (the nav's open-order badge, the
+ * order form's self-trade warning) silently went stale exactly when it was
+ * load-bearing. Feed lifetime should follow the session, not the viewport. */
+export function useOrdersFeed(): void {
   const { isAuthenticated, token, accountId } = useAuth()
   const queryClient = useQueryClient()
-  // Persists across renders and across socket reconnects/resyncs, but is
-  // naturally scoped to this hook instance's lifetime — a fresh page load
-  // has no client-observed times yet, which is correct (we didn't witness
-  // any accept this session).
-  const receivedAtRef = useRef<Map<number, number>>(new Map())
-
   const queryKey = useMemo(() => ordersQueryKey(accountId), [accountId])
-
-  const query = useQuery({
-    queryKey,
-    queryFn: getOrders,
-    enabled: isAuthenticated,
-  })
 
   useEffect(() => {
     if (!isAuthenticated || !token) {
       ordersSocket.disconnect()
+      receivedAtByOrderId.clear()
       return
     }
 
     const handlers: OrdersSocketHandlers = {
       onOrderAccepted: (order) => {
-        receivedAtRef.current.set(order.orderId, Date.now())
+        receivedAtByOrderId.set(order.orderId, Date.now())
         queryClient.setQueryData<Order[]>(queryKey, (prev) => {
           if (!prev) return [order]
           if (prev.some((o) => o.orderId === order.orderId)) return prev
@@ -110,6 +123,19 @@ export function useOrders(): UseOrdersResult {
     ordersSocket.connect(token, handlers)
     return () => ordersSocket.disconnect()
   }, [isAuthenticated, token, queryClient, queryKey])
+}
+
+export function useOrders(): UseOrdersResult {
+  const { isAuthenticated, accountId } = useAuth()
+  const queryClient = useQueryClient()
+
+  const queryKey = useMemo(() => ordersQueryKey(accountId), [accountId])
+
+  const query = useQuery({
+    queryKey,
+    queryFn: getOrders,
+    enabled: isAuthenticated,
+  })
 
   const cancelOrder = useCallback(
     async (orderId: number) => {
@@ -155,7 +181,7 @@ export function useOrders(): UseOrdersResult {
   )
 
   const orders = useMemo<OrderRow[]>(
-    () => (query.data ?? []).map((o) => ({ ...o, receivedAt: receivedAtRef.current.get(o.orderId) ?? null })),
+    () => (query.data ?? []).map((o) => ({ ...o, receivedAt: receivedAtByOrderId.get(o.orderId) ?? null })),
     [query.data],
   )
 
