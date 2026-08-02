@@ -39,6 +39,24 @@ interface DisplayLevel {
 const ROW_PX = 22
 const SPREAD_ROW_PX = ROW_PX + 2
 
+/** How long a momentarily-empty book keeps showing its last known levels
+ * before we accept the emptiness and say so.
+ *
+ * A book can legitimately empty for a few milliseconds: a market maker that
+ * re-quotes by cancelling its resting orders and then placing replacements
+ * leaves the book with no levels in between, and the public feed faithfully
+ * reports every one of those deltas. Rendering that literally means the whole
+ * panel is replaced by an empty-state message and then repopulated, several
+ * times a minute — the book appears to flicker out of existence on a market
+ * that is in fact perfectly healthy.
+ *
+ * So a transient empty book holds the previous frame instead. The held levels
+ * are at most EMPTY_GRACE_MS stale, which is well inside the staleness any
+ * book display already carries, and vastly preferable to a strobing panel. If
+ * the book is *genuinely* empty the grace expires and the real empty state
+ * appears — we delay that message, never suppress it. */
+const EMPTY_GRACE_MS = 600
+
 /** How many levels per side fit in `height` without overflowing. The book
  * does not scroll: it shows as much depth as the panel can hold, centred on
  * the spread, the way a real book display works. Scrolling a surface that
@@ -62,9 +80,34 @@ function withCumulative(entries: [number, number][]): DisplayLevel[] {
 }
 
 export function OrderBook() {
-  const bids = useBookStore((s) => s.bids)
-  const asks = useBookStore((s) => s.asks)
+  const liveBids = useBookStore((s) => s.bids)
+  const liveAsks = useBookStore((s) => s.asks)
   const conn = useBookStore((s) => s.conn)
+
+  // See EMPTY_GRACE_MS. Only holds while the feed is `live`: on a reconnect
+  // the store is reset to empty deliberately, and showing pre-disconnect
+  // levels as though they were current would be a real lie rather than a
+  // 600ms-stale truth.
+  const emptyNow = liveBids.size === 0 && liveAsks.size === 0
+  const holdable = conn === 'live'
+  const heldRef = useRef<{ bids: Map<number, number>; asks: Map<number, number> } | null>(null)
+  const [graceExpired, setGraceExpired] = useState(false)
+
+  if (!emptyNow) heldRef.current = { bids: liveBids, asks: liveAsks }
+  if (!holdable) heldRef.current = null
+
+  useEffect(() => {
+    if (!emptyNow || !holdable) {
+      setGraceExpired(false)
+      return
+    }
+    const timer = setTimeout(() => setGraceExpired(true), EMPTY_GRACE_MS)
+    return () => clearTimeout(timer)
+  }, [emptyNow, holdable])
+
+  const holding = emptyNow && holdable && !graceExpired && heldRef.current !== null
+  const bids = holding ? heldRef.current!.bids : liveBids
+  const asks = holding ? heldRef.current!.asks : liveAsks
 
   // Measured, not guessed: the panel's height is set by the trade layout and
   // changes with the viewport and the breakpoint, so the number of levels
@@ -142,7 +185,14 @@ export function OrderBook() {
         <div className="flex flex-1 items-center justify-center px-3 text-center text-ui-body text-ink-2">
           {conn === 'connecting'
             ? 'Loading order book…'
-            : 'No orders on this market yet — be the first to trade.'}
+            : // "be the first to trade" is only true of a market that has
+              // never had a resting order. Once we've seen levels on this
+              // connection, an empty book means the resting orders were
+              // filled or pulled — saying nobody has ever traded here would
+              // be plainly wrong to a user who was watching them a moment ago.
+              heldRef.current !== null
+              ? 'No resting orders right now.'
+              : 'No orders on this market yet — be the first to trade.'}
         </div>
       ) : (
         <>
