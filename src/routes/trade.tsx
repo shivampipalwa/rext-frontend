@@ -4,11 +4,10 @@
 // trade/, tape/, orders/, wallet/ per DESIGN.md's component tree).
 //
 // Breakpoints (matching Tailwind's default md/lg/xl exactly):
-//   >=1280 (xl)      three columns: book | chart+entry | trades+wallet.
+//   >=1280 (xl)      three rails: book+trades | chart | entry+wallet.
 //                    Orders table spans full width below.
-//   1024-1279 (lg)   same three columns, but trades+wallet collapse into one
-//                    tabbed panel.
-//   768-1023 (md)    two columns: chart+entry | book+trades tabbed.
+//   1024-1279 (lg)   the same three rails, narrower.
+//   768-1023 (md)    two columns: chart | book+trades+entry tabbed.
 //                    Orders table stays full width below.
 //   <768             single column, bottom tab bar: Chart · Book · Trade ·
 //                    Orders. Order entry becomes the full-screen "Trade" tab
@@ -36,13 +35,28 @@
 //
 // Instead, TRADE_SHELL below gives the whole screen one ceiling —
 // `100vh - header` — and the columns divide it. Each column is a flex
-// column: the panel that should absorb the slack gets `flex-1 min-h-0`
-// (chart, book, tape) and the content-sized ones get `shrink-0` (order
-// entry, wallet). Because all three columns are grid siblings in a
-// fixed-height row, they are all exactly as tall as the row, so they end
-// level by construction at every viewport size rather than by coincidence at
-// one of them. The chart now grows with the display instead of being capped
-// at 480px on a 1440px-tall monitor.
+// column: the panel that should absorb the slack gets `flex-1 min-h-0` and
+// the content-sized ones get `shrink-0`. Because all three columns are grid
+// siblings in a fixed-height row, they are all exactly as tall as the row, so
+// they end level by construction at every viewport size rather than by
+// coincidence at one of them. The chart now grows with the display instead of
+// being capped at 480px on a 1440px-tall monitor.
+//
+// WHICH PANEL SITS IN WHICH RAIL is the other half of the height story, and
+// it is not cosmetic. Order entry used to sit under the chart, content-sized,
+// with the chart as the `flex-1` panel beneath it — so the chart was handed
+// whatever the form did not want. The form is ~338px tall; the chart got the
+// remaining ~263px of a ~610px row. Worse, the form's height depends on
+// whether you are SIGNED IN: signed out it collapses to a ~112px sign-in
+// prompt, so merely logging in silently cost the chart ~165px, nearly 40% of
+// its height, with nothing in the layout aware it had happened.
+//
+// So the two are no longer in the same column. The chart owns the centre rail
+// outright and its height is now a function of the viewport alone. Reading
+// surfaces (book, tape) share the left rail; acting surfaces (order entry,
+// wallet) share the right. That grouping is also why the right rail can hold
+// the form at all: at 340px it is wide enough for price and size to share a
+// row, which is what kept the form from simply growing taller again.
 //
 // `min-h-[Npx]` is the floor: below it the shell stops shrinking and the
 // PAGE scrolls instead of crushing the panels. A real trading screen doesn't
@@ -220,9 +234,11 @@ interface Tab {
   content: ReactNode
 }
 
-/** Combines two regions into one tabbed Panel, for the breakpoints where
- * DESIGN.md calls for a collapse (e.g. trades+wallet at the lg tier). */
-function TabbedPanel({ tabs, className = '' }: { tabs: [Tab, Tab]; className?: string }) {
+/** Combines several regions into one tabbed Panel, for the breakpoints that
+ * don't have enough columns to show them side by side. Takes any number of
+ * tabs: the tablet tier collapses three regions (book, trades, order entry)
+ * into its single right-hand column. */
+function TabbedPanel({ tabs, className = '' }: { tabs: Tab[]; className?: string }) {
   const [activeKey, setActiveKey] = useState(tabs[0].key)
   const active = tabs.find((t) => t.key === activeKey) ?? tabs[0]
   return (
@@ -333,20 +349,24 @@ function MobileTradeLayout() {
 function TabletTradeLayout() {
   return (
     <div className={`${TRADE_SHELL} min-h-[820px]`}>
+      {/* Two columns is one short of the rail arrangement the wider tiers
+          use, so order entry joins the tabbed column instead of sitting under
+          the chart. Costs a tab switch to place an order; buys the chart the
+          full height of the row instead of the ~40% the form used to leave
+          it. The mobile tier already treats order entry as its own tab, so
+          this is the same trade the layout makes one breakpoint down. */}
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-2">
-        <div className="flex min-h-0 flex-col gap-2">
-          <ChartPanel className="min-h-0 flex-1" />
-          <OrderEntryPanel className="shrink-0" />
-        </div>
+        <ChartPanel className="min-h-0" />
         <TabbedPanel
           className="min-h-0"
           tabs={[
             { key: 'book', label: 'Order book', content: <BookContent /> },
             { key: 'trades', label: 'Trades', content: <TradesContent /> },
+            { key: 'entry', label: 'Order entry', content: <OrderEntryContent /> },
           ]}
         />
       </div>
-      <OrdersTablePanel className="h-[232px] shrink-0" />
+      <OrdersTablePanel className="h-[190px] shrink-0" />
     </div>
   )
 }
@@ -354,21 +374,20 @@ function TabletTradeLayout() {
 function DesktopNarrowTradeLayout() {
   return (
     <div className={`${TRADE_SHELL} min-h-[860px]`}>
-      <div className="grid min-h-0 flex-1 grid-cols-[248px_1fr_268px] gap-2">
+      {/* Same three rails as the desktop tier, narrower — see its comments
+          for why the tape rather than the form absorbs the right rail's
+          slack. 300px is the floor for the order form before price and size
+          have to stop sharing a row. */}
+      <div className="grid min-h-0 flex-1 grid-cols-[248px_1fr_300px] gap-2">
         <OrderBookPanel className="min-h-0" />
+        <ChartPanel className="min-h-0" />
         <div className="flex min-h-0 flex-col gap-2">
-          <ChartPanel className="min-h-0 flex-1" />
           <OrderEntryPanel className="shrink-0" />
+          <WalletPanel className="shrink-0" />
+          <TradesPanel className="min-h-0 flex-1" />
         </div>
-        <TabbedPanel
-          className="min-h-0"
-          tabs={[
-            { key: 'trades', label: 'Trades', content: <TradesContent /> },
-            { key: 'wallet', label: 'Wallet', content: <WalletContent /> },
-          ]}
-        />
       </div>
-      <OrdersTablePanel className="h-[232px] shrink-0" />
+      <OrdersTablePanel className="h-[190px] shrink-0" />
     </div>
   )
 }
@@ -376,20 +395,43 @@ function DesktopNarrowTradeLayout() {
 function DesktopTradeLayout() {
   return (
     <div className={`${TRADE_SHELL} min-h-[880px]`}>
-      <div className="grid min-h-0 flex-1 grid-cols-[288px_1fr_308px] gap-2">
+      {/* Right rail widened 308 -> 340: it now holds the order form rather
+          than a read-only summary, and price/size sit side by side inside it
+          (p-3 either side leaves 316px of usable width). */}
+      <div className="grid min-h-0 flex-1 grid-cols-[288px_1fr_340px] gap-2">
+        {/* The book gets a whole rail to itself. It renders as many levels as
+            its height allows (OrderBook's levelsPerSide), so height converts
+            directly into visible depth — ~12 levels a side here, comfortably
+            more than the ten the market quotes. */}
         <OrderBookPanel className="min-h-0" />
+
+        {/* The chart now owns the full height of the row rather than whatever
+            the order form left over. */}
+        <ChartPanel className="min-h-0" />
+
+        {/* Acting rail, plus the tape as its slack absorber. Order entry and
+            the wallet are both content-sized: the form has a natural height
+            and stretching it just leaves a bordered panel half empty, and the
+            wallet is a four-number summary. Something must still take the
+            slack or the rail ends short of the other two and the screen
+            regains the ragged bottom edge this layout exists to avoid — and
+            the tape is the right panel for it. It's the only one here that
+            genuinely reads better taller, and it degrades gracefully: on a
+            short viewport it shrinks to the few most recent prints, which is
+            the part that carries nearly all the value, while on a tall one it
+            grows instead of leaving dead space. */}
         <div className="flex min-h-0 flex-col gap-2">
-          <ChartPanel className="min-h-0 flex-1" />
           <OrderEntryPanel className="shrink-0" />
-        </div>
-        {/* Tape absorbs the slack; the wallet is a four-number summary and
-            has no business being stretched to fill a column. */}
-        <div className="flex min-h-0 flex-col gap-2">
-          <TradesPanel className="min-h-0 flex-1" />
           <WalletPanel className="shrink-0" />
+          <TradesPanel className="min-h-0 flex-1" />
         </div>
       </div>
-      <OrdersTablePanel className="h-[248px] shrink-0" />
+      {/* 248 -> 190. Still fixed, for the reason in the HEIGHT MODEL note
+          above — a content-sized orders panel resizes the chart every time an
+          order fills. But 248px was sized for a table that is empty or nearly
+          empty most of the time, and every pixel it gives back goes straight
+          to the rails above it. 190px still shows the tabs plus four rows. */}
+      <OrdersTablePanel className="h-[190px] shrink-0" />
     </div>
   )
 }

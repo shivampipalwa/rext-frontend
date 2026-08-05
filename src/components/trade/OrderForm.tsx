@@ -269,9 +269,10 @@ export function OrderForm() {
   const selfTradeWarning = crossingOwnOrders().length > 0 ? selfTradeMessage('would') : null
 
   return (
-    // Capped and centred: the order-entry panel sits under the chart and is
-    // as wide as it, and a 3-digit integer field stretched to 1100px reads as
-    // a layout mistake. At the narrower tiers the cap simply doesn't bind.
+    // Capped and centred. In the desktop rails the panel is ~300-340px wide
+    // and the cap never binds; it still matters at the tablet and mobile
+    // tiers, where this form gets a full-width column and a 3-digit integer
+    // field stretched across it reads as a layout mistake.
     <form onSubmit={handleSubmit} className="mx-auto flex w-full max-w-[620px] flex-col gap-3">
       {/* Buy/Sell first and full width: it decides the direction of the whole
           form, and it used to render as two ~40px chips squeezed into the
